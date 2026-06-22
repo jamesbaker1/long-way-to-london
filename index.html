@@ -783,6 +783,17 @@ body.editing .chk-it .chk-rm{display:flex}
 .mleg .mb{flex:1;min-width:0}
 .mleg .mt{font-weight:600;font-size:14px}
 .mleg .ms{font-size:12px;color:var(--muted)}
+/* mode-coded route map additions */
+.mapwrap svg .hopline{cursor:pointer;transition:stroke-width .12s,opacity .12s}
+.mapwrap svg .hopline:hover{stroke-width:5;opacity:1}
+.mapwrap svg .hopmid{cursor:pointer}
+.mapwrap svg .citydot{cursor:pointer}
+.maplegend{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}
+.maplegend .mli{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:12px;color:var(--text);box-shadow:var(--sh-1)}
+.maplegend .mli .mlswatch{width:22px;height:0;border-top-width:3px;border-top-style:solid;border-radius:2px;display:inline-block;flex-shrink:0}
+.maplegend .mli .mlico{font-size:13px}
+.maplegend .mli .mlname{font-weight:600}
+.maphint{font-size:11.5px;color:var(--muted-2);margin:-8px 0 14px}
 
 /* ============ GALLERY ============ */
 .gallgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
@@ -823,6 +834,28 @@ body.editing .bactual{display:inline-block}
 .qritem .ql{font-family:"Space Mono",monospace;font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
 .qritem .qv{font-size:13px;font-weight:600;color:var(--text);margin-top:2px;line-height:1.35}
 .qritem.wide{grid-column:1/-1}
+
+/* ============ DUAL CURRENCY ============ */
+.fx-conv{color:var(--muted-2);font-weight:400;font-family:"Space Mono",monospace;font-size:.86em;white-space:nowrap}
+.fx-card{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:var(--sh-1);padding:15px 16px;margin-bottom:14px}
+.fx-card .fxh{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.fx-card .fxh .fxi{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--saffron),var(--coral));flex-shrink:0}
+.fx-card .fxh b{font-family:Fraunces,serif;font-size:16px;font-weight:600}
+.fx-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fx-row input{flex:1;min-width:90px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--paper-2);padding:0 12px;font-size:15px;font-family:"Space Mono",monospace;color:var(--text)}
+.fx-row input:focus{outline:none;border-color:var(--sea);box-shadow:0 0 0 3px rgba(31,122,196,.14)}
+.fx-row select{height:42px;border-radius:11px;border:1px solid var(--line);background:var(--card);padding:0 8px;font-size:14px;font-family:inherit;color:var(--text)}
+.fx-row .fxswap{width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:16px;color:var(--sea-deep);flex-shrink:0}
+.fx-row .fxswap:hover{border-color:var(--sea)}
+.fx-out{margin-top:12px;font-family:Fraunces,serif;font-size:22px;font-weight:700;color:var(--sea-deep)}
+.fx-out small{display:block;font-family:"Space Mono",monospace;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.04em;margin-top:3px}
+.fx-rateline{font-size:11.5px;color:var(--muted-2);margin-top:9px;line-height:1.5}
+.fx-rates{margin-top:10px;display:none;flex-direction:column;gap:6px}
+body.editing .fx-rates{display:flex}
+.fx-rateedit{display:flex;align-items:center;gap:8px;font-size:12px}
+.fx-rateedit label{flex:1;color:var(--muted)}
+.fx-rateedit input{width:120px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--paper-2);padding:0 9px;font-size:13px;font-family:"Space Mono",monospace;color:var(--text);text-align:right}
+.fx-rateedit input:focus{outline:none;border-color:var(--sea)}
 
 /* ============ SHARE / EXPORT / QR ============ */
 .toolgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
@@ -5141,6 +5174,153 @@ function dayNumber(){ return Math.round((today()-ymd(DAY1))/864e5)+1; }
 function firstSentence(s){ s=String(s||""); const m=s.match(/^.*?[.!?](\s|$)/); return (m?m[0]:s).trim().slice(0,170); }
 function cityFromBase(base){ const m=String(base||"").split(/[(—,]/)[0].trim(); return m||"On the road"; }
 
+/* ============ CURRENCY (dual local + USD, offline) ============
+   DATA.currency = { home:"USD", rates:{ <regionId>:{code,sym,perUsd} } }  perUsd = local per 1 USD.
+   Live rates merge any owner-edited overrides from OVERLAY.settings.rates over DATA defaults. */
+const FX_HOME = (DATA.currency && DATA.currency.home) || "USD";
+function fxRates(){
+  const base = (DATA.currency && DATA.currency.rates) || {};
+  const ov = (OVERLAY && OVERLAY.settings && OVERLAY.settings.rates) || {};
+  const out = {};
+  for(const id in base) out[id] = Object.assign({}, base[id]);
+  for(const id in ov){ if(out[id]) out[id] = Object.assign({}, out[id], ov[id]); else out[id] = Object.assign({}, ov[id]); }
+  return out;
+}
+/* code/region helpers — "USD" is the home pseudo-currency (perUsd=1). */
+function fxEntry(regionId){
+  if(regionId==="USD") return {code:"USD", sym:"$", perUsd:1};
+  const r = fxRates(); return r[regionId] || null;
+}
+function fxPerUsd(regionId){ const e=fxEntry(regionId); return e? (parseFloat(e.perUsd)||0) : 0; }
+/* Convert an amount in `from` region currency to `to` region currency (region ids or "USD"). */
+function fxConvert(amount, from, to){
+  const pf = fxPerUsd(from), pt = fxPerUsd(to);
+  if(!pf || !pt) return null;
+  return amount / pf * pt;
+}
+/* Symbol/token → region id (or "USD"). Longest tokens first so "US$" beats "$". */
+const FX_TOKENS = [
+  {re:/NT\$/, id:"tw"}, {re:/US\$|USD/, id:"USD"}, {re:/S\$/, id:"sg"}, {re:/RM/, id:"my"},
+  {re:/GEL|₾/, id:"ge"}, {re:/UZS|so[ʼ'`]m/i, id:"uz"}, {re:/KGS|сом/i, id:"kg"},
+  {re:/£|GBP/, id:"uk"}, {re:/[₫đ]|VND/, id:"vn"}, {re:/\$/, id:"USD"}
+];
+function fxRegionForToken(tok){ for(const t of FX_TOKENS){ if(t.re.test(tok)) return t.id; } return null; }
+/* Format a numeric amount in a region's local currency with its symbol. */
+function fxFmt(amount, regionId){
+  const e = fxEntry(regionId); if(!e) return "";
+  let n = amount;
+  const abs = Math.abs(n);
+  // round sensibly: big local-currency numbers to whole, small to nearest unit
+  if(abs>=1000) n = Math.round(n);
+  else if(abs>=100) n = Math.round(n);
+  else n = Math.round(n);
+  const num = n.toLocaleString("en-US");
+  const sym = e.sym || "";
+  // symbols that sit before the number; codes like UZS/KGS/GEL sit before with a space
+  if(/^[A-Z]{3}$/.test(sym)) return sym+" "+num;
+  return sym+num;
+}
+/* The single price-token regex used for both parsing and DOM annotation.
+   Matches an optional approx ~/≈, a currency token, then a number or number range. */
+const FX_PRICE_RE = /(~|≈|about |approx\.? )?(NT\$|US\$|USD|S\$|RM|GEL|₾|UZS|so[ʼ'`]m|KGS|сом|£|GBP|VND|[₫đ]|\$)\s?(\d[\d,]*(?:\.\d+)?)(\s?[–—-]\s?(\d[\d,]*(?:\.\d+)?))?/g;
+function fxNum(s){ return parseFloat(String(s).replace(/,/g,"")) || 0; }
+/* Given a single matched price (token + amount[s]), return the converted-counterpart string,
+   e.g. "≈$31" for an NT$ price, or "≈NT$640" for a USD price. Returns "" if not convertible. */
+function fxCounterpart(token, aStr, bStr){
+  const from = fxRegionForToken(token); if(!from) return "";
+  const to = (from==="USD") ? fxHomeTarget() : "USD";
+  if(!to || to===from) return "";
+  const a = fxNum(aStr);
+  let outA = fxConvert(a, from, to); if(outA==null) return "";
+  if(bStr!=null && bStr!==""){
+    const outB = fxConvert(fxNum(bStr), from, to);
+    if(outB!=null) return "≈"+fxFmt(outA,to)+"–"+fxFmt(outB,to).replace(/^[^\d]*/,"");
+  }
+  return "≈"+fxFmt(outA,to);
+}
+/* When a price is already in USD, pick which local currency to show alongside it.
+   Use the region the user is currently in (so "$20" near a Taiwan day → NT$). */
+function fxHomeTarget(){
+  try{ const id=currentRegionId(); if(id && fxPerUsd(id)) return id; }catch(e){}
+  return "tw";
+}
+/* Build the full dual string for a price string (used for explicit cost displays):
+   "NT$1,000 (≈$31)". Returns the original string with appended conversion(s). */
+function fxDual(str){
+  if(str==null) return "";
+  str = String(str);
+  return str.replace(FX_PRICE_RE, function(m, approx, token, a, range, b){
+    const cp = fxCounterpart(token, a, b);
+    return cp ? m+" ("+cp+")" : m;
+  });
+}
+/* Same as fxDual but returns HTML with the conversion wrapped in a muted span. */
+function fxDualHTML(str){
+  if(str==null) return "";
+  str = esc(String(str));
+  return str.replace(FX_PRICE_RE, function(m, approx, token, a, range, b){
+    const cp = fxCounterpart(token, a, b);
+    return cp ? m+' <span class="fx-conv">('+esc(cp)+')</span>' : m;
+  });
+}
+
+/* ---- DOM annotator: walk rendered text nodes, append a muted conversion span after each
+   price, once. Skips inputs/editable fields and already-annotated nodes. ---- */
+function fxAnnotate(root){
+  if(!root) return;
+  if(!(DATA.currency && DATA.currency.rates)) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode:function(node){
+      const v = node.nodeValue;
+      if(!v || v.length<2 || !/\d/.test(v)) return NodeFilter.FILTER_REJECT;
+      let p = node.parentNode;
+      while(p && p!==root){
+        if(p.nodeType===1){
+          const tag = p.tagName;
+          if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||tag==="SCRIPT"||tag==="STYLE") return NodeFilter.FILTER_REJECT;
+          if(p.isContentEditable) return NodeFilter.FILTER_REJECT;
+          if(p.classList && p.classList.contains("fx-conv")) return NodeFilter.FILTER_REJECT;
+          if(p.hasAttribute && p.hasAttribute("data-fx-done")) return NodeFilter.FILTER_REJECT;
+        }
+        p = p.parentNode;
+      }
+      FX_PRICE_RE.lastIndex = 0;
+      return FX_PRICE_RE.test(v) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const targets = [];
+  let n; while((n=walker.nextNode())) targets.push(n);
+  targets.forEach(function(node){
+    FX_PRICE_RE.lastIndex = 0;
+    const text = node.nodeValue;
+    let last = 0, m, frag = document.createDocumentFragment(), any = false;
+    while((m = FX_PRICE_RE.exec(text))){
+      const cp = fxCounterpart(m[2], m[3], m[5]);
+      if(!cp) continue;
+      any = true;
+      const end = m.index + m[0].length;
+      if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      frag.appendChild(document.createTextNode(m[0]+" "));
+      const span = document.createElement("span");
+      span.className = "fx-conv"; span.textContent = "("+cp+")";
+      frag.appendChild(span);
+      last = end;
+    }
+    if(!any) return;
+    if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    const parent = node.parentNode; if(!parent) return;
+    if(parent.nodeType===1) parent.setAttribute("data-fx-done","1");
+    parent.replaceChild(frag, node);
+  });
+}
+/* Annotate the relevant rendered surfaces (day/detail/budget text) after a view render. */
+function fxAnnotateViews(){
+  if(!(DATA.currency && DATA.currency.rates)) return;
+  ["#budgetHost","#sub-budget .subhost","#sheetBody","#mapHost","#refHost"].forEach(function(sel){
+    document.querySelectorAll(sel).forEach(function(el){ try{ fxAnnotate(el); }catch(e){} });
+  });
+}
+
 /* ============ IMAGES (pictures everywhere; offline gradient fallback) ============ */
 const REGION_HUE = {tw:"#15568f",vn:"#0f9d96",my:"#c46a1f",sg:"#1f7ac4",uz:"#1f6fc4",ge:"#6a5ed0",uk:"#3a4d8f",kg:"#0f8a7a",tr:"#c44a6a",am:"#b8721a",hero:"#15568f"};
 function hueFor(key){ return REGION_HUE[key] || "#15568f"; }
@@ -5347,6 +5527,7 @@ function rerenderAll(){
   safe(renderReference,"reference"); safe(renderCalendar,"calendar"); safe(renderJournal,"journal");
   safe(renderChecklist,"checklist"); safe(renderMap,"map"); safe(renderGallery,"gallery");
   safe(renderCountryRef,"countryref"); safe(renderShare,"share"); safe(updateReadiness,"readiness");
+  safe(fxAnnotateViews,"fxannotate");
 }
 
 /* ============ ROUTE MODEL ============ */
@@ -5425,6 +5606,7 @@ function setView(v){
   $$(".railbtn").forEach(b => { const on=b.dataset.view===v; b.classList.toggle("act", on); if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
   if(v !== "more") showMoreRoot();
   lazyRender(v);
+  fxAnnotateViews();
   window.scrollTo({top:0, behavior:"smooth"});
 }
 function bindNav(){ $$("[data-view]").forEach(b => { if(b.classList.contains("view")) return; b.addEventListener("click", () => setView(b.dataset.view)); }); }
@@ -5860,6 +6042,9 @@ function openSheet(opts){
   $("#sheetBody").scrollTop = 0;
   SHEET_ONRENDER = opts.onRender || null;
   if(SHEET_ONRENDER) try{ SHEET_ONRENDER(); }catch(e){ console.error(e); }
+  /* Dual-currency annotate the sheet body — but not while editing (editable fields must
+     stay clean for inline editing; the annotator also skips contenteditable nodes). */
+  if(!EDITING){ try{ fxAnnotate($("#sheetBody")); }catch(e){} }
   LAST_FOCUS = document.activeElement;
   $("#sheetScrim").classList.add("show");
   $("#sheet").classList.add("show");
@@ -5890,6 +6075,10 @@ $("#sheet").addEventListener("keydown", e=>{
 
 function metaRow(icon,label,text){
   return '<div class="sh-metarow"><div class="smi">'+icon+'</div><div class="smb"><div class="smt">'+esc(label)+'</div><div class="smv">'+esc(text)+'</div></div></div>';
+}
+/* cost meta row with explicit dual-currency (local + USD) conversion baked into the value. */
+function costMetaRow(text){
+  return '<div class="sh-metarow"><div class="smi">💵</div><div class="smb"><div class="smt">Cost</div><div class="smv">'+fxDualHTML(text)+'</div></div></div>';
 }
 let OPEN_DAY = null;
 /* Editable list block: each <div class=ssi> is editable + (in edit mode) re-orderable/deletable;
@@ -6035,7 +6224,7 @@ function openRegionItemSheet(region, kind, i){
   if(kind==="bookings"){ title=firstSentence(item.label); text=item.meta||item.label; officialUrl=item.url; cost=item.cost; }
   else { const s=String(item); title=firstSentence(s); text=s; }
   let body = "";
-  if(cost) body += '<div class="sh-meta">'+metaRow("💵","Cost",cost)+'</div>';
+  if(cost) body += '<div class="sh-meta">'+costMetaRow(cost)+'</div>';
   body += '<div class="sh-block"><p>'+esc(text)+'</p></div>';
   openSheet({key:region.id, eyebrow:region.flag+' '+esc(region.country)+' · '+(labels[kind]||"Detail"), title:title, cap:region.imgSubject, name:title+" "+region.country,
     officialUrl:officialUrl, officialLabel:"Book / Official", bodyHTML:body});
@@ -6324,12 +6513,12 @@ function bookItemHTML(b){
   return '<div class="book-it '+(done?'done':'')+'" data-bookrow="'+b.id+'">'+
     '<button class="checkbox" data-book="'+b.id+'" aria-label="Toggle booked" aria-pressed="'+done+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></button>'+
     '<button class="bk-b" data-bookopen="'+b.id+'"><div class="bk-t clamp2">'+esc(b.label)+'</div><div class="bk-m">'+esc(b.meta||"")+'</div>'+
-    '<div class="bk-foot">'+(b.cost?'<span class="bk-cost">'+esc(b.cost)+'</span>':'')+(url?'<span class="bk-link">Official ↗</span>':'')+'<span class="bk-open">Details ›</span></div></button></div>';
+    '<div class="bk-foot">'+(b.cost?'<span class="bk-cost">'+fxDualHTML(b.cost)+'</span>':'')+(url?'<span class="bk-link">Official ↗</span>':'')+'<span class="bk-open">Details ›</span></div></button></div>';
 }
 function openBookSheet(b){
   let body = '<div class="sh-block"><p>'+esc(b.meta||"")+'</p></div>';
   const meta=[];
-  if(b.cost) meta.push(metaRow("💵","Cost",b.cost));
+  if(b.cost) meta.push(costMetaRow(b.cost));
   if(b.when) meta.push(metaRow("⏱","When",b.when));
   if(b.source && b.source!=="timeline") meta.push(metaRow("🧭","For",b.source));
   if(meta.length) body = '<div class="sh-meta">'+meta.join("")+'</div>'+body;
@@ -6383,8 +6572,11 @@ function renderBudgetInto(host){
   const max = Math.max.apply(null, lines.map(l=>Math.max(parseInt(l.amount,10)||0,parseInt(l.actual,10)||0)).concat([1]));
   const hues=["#1f7ac4","#0f9d96","#e09b29","#e96a48","#6a5ed0","#d2497e","#5a6480","#15568f"];
   const diff = totalAct - total;
-  host.innerHTML = '<div class="card" style="padding:18px"><div class="budget-total"><span class="bn">$'+total.toLocaleString()+'</span><span class="bl">estimated</span>'+(totalAct?'<span class="ba">$'+totalAct.toLocaleString()+' logged</span>':'')+'</div>'+
-    '<div class="budget-sub"><span>Estimate <b>$'+total.toLocaleString()+'</b></span>'+(totalAct?'<span>Logged <b>$'+totalAct.toLocaleString()+'</b></span><span>'+(diff>=0?'Over by ':'Under by ')+'<b>$'+Math.abs(diff).toLocaleString()+'</b></span>':'<span>Turn on Edit to log actual spend</span>')+'</div>'+
+  /* explicit dual-currency line for the headline total: USD + current-region local equivalent. */
+  const fxTgt = fxHomeTarget(); const fxConv = fxConvert(total, "USD", fxTgt);
+  const dualLine = (fxConv!=null) ? '<div class="fx-rateline" data-fx-done="1">Total ≈ <b style="color:var(--text)">'+esc(fxFmt(fxConv,fxTgt))+'</b> in '+esc((fxEntry(fxTgt)||{}).code||"")+' at today’s rate</div>' : '';
+  host.innerHTML = '<div class="card" style="padding:18px"><div class="budget-total"><span class="bn" data-fx-done="1">$'+total.toLocaleString()+'</span><span class="bl">estimated</span>'+(totalAct?'<span class="ba" data-fx-done="1">$'+totalAct.toLocaleString()+' logged</span>':'')+'</div>'+
+    '<div class="budget-sub" data-fx-done="1"><span>Estimate <b>$'+total.toLocaleString()+'</b></span>'+(totalAct?'<span>Logged <b>$'+totalAct.toLocaleString()+'</b></span><span>'+(diff>=0?'Over by ':'Under by ')+'<b>$'+Math.abs(diff).toLocaleString()+'</b></span>':'<span>Turn on Edit to log actual spend</span>')+'</div>'+dualLine+
     lines.map((l,i)=>'<div class="bline"><div class="bline-top"><span class="bcat">'+esc(l.name)+'</span>'+
       '<span class="bvals"><input class="bedit mono" type="number" inputmode="numeric" value="'+(parseInt(l.amount,10)||0)+'" data-bamt="'+attr(l.name)+'" aria-label="'+attr(l.name)+' estimate" title="Estimate">'+
       '<input class="bactual mono" type="number" inputmode="numeric" placeholder="actual" value="'+(l.actual!=null?parseInt(l.actual,10):"")+'" data-bact="'+attr(l.name)+'" aria-label="'+attr(l.name)+' actual" title="Logged actual"></span></div>'+
@@ -6408,6 +6600,8 @@ function renderBudgetInto(host){
 function renderBudgetAll(){
   const h=$("#budgetHost"); if(h) renderBudgetInto(h);
   const s=$("#sub-budget .subhost"); if(s){ s.innerHTML='<div class="view-head" style="margin-top:0"><div><h2>Budget</h2></div></div>'; const d=document.createElement("div"); renderBudgetInto(d); s.appendChild(d); }
+  if(h) try{ fxAnnotate(h); }catch(e){}
+  if(s) try{ fxAnnotate(s); }catch(e){}
 }
 
 /* ============ PREP (problems + packing + prep + flex) ============ */
@@ -6692,10 +6886,125 @@ const LEG_GEO = {
   uk:{lat:51.5,lon:-0.13,city:"London"}, kg:{lat:42.9,lon:74.6,city:"Bishkek"},
   tr:{lat:38.6,lon:34.8,city:"Cappadocia"}, am:{lat:40.2,lon:44.5,city:"Yerevan"}
 };
+/* ---- MODE-CODED ROUTE MAP ----
+   Renders DATA.route as an inline SVG: each hop is a line styled by its transport mode
+   (color + dash from DATA.route.modes[mode].style), the mode icon sits at the midpoint,
+   shared cities are de-duped into dots+labels, and scenic/optional hops are marked
+   distinctly. Fully offline (no tiles). Falls back to the legacy LEG_GEO node map if
+   DATA.route is absent. */
+function modeStyle(modeKey){
+  const m = (DATA.route && DATA.route.modes && DATA.route.modes[modeKey]) || {};
+  return {label:m.label||modeKey||"travel", icon:m.icon||"•", color:m.color||"#1f7ac4", style:(m.style||"solid")};
+}
+function dashFor(style, w){
+  if(style==="dashed") return (w*2.4)+" "+(w*2.2);
+  if(style==="dotted") return (w*0.1)+" "+(w*2.0);
+  return "";
+}
+let MAP_HOPS=[]; /* live hop list, indexed for click→sheet */
 function renderMap(){
   const host=$("#mapHost"); if(!host) return;
-  // Order from day-bearing legs (regions + committed options) so the committed back-half
-  // (e.g. Kyrgyzstan, Aug 10-14) is drawn on the route, not skipped.
+  const route = DATA.route;
+  if(!route || !Array.isArray(route.hops) || !route.hops.length){ renderMapLegacy(host); return; }
+  const hops = route.hops.filter(h=>h && Array.isArray(h.coords) && h.coords.length===2);
+  MAP_HOPS = hops;
+  // equirectangular projection (per spec): x=(lng+180)/360, y=(90-lat)/180, normalised then fit.
+  function projX(lng){ return (lng+180)/360; }
+  function projY(lat){ return (90-lat)/180; }
+  // collect all projected points to compute a tight fit box
+  const allPts=[];
+  hops.forEach(h=>h.coords.forEach(c=>allPts.push([projX(c[1]), projY(c[0])])));
+  const xs=allPts.map(p=>p[0]), ys=allPts.map(p=>p[1]);
+  let minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  // guard against a degenerate (zero-span) box
+  if(maxX-minX < 1e-6){ minX-=.01; maxX+=.01; } if(maxY-minY < 1e-6){ minY-=.01; maxY+=.01; }
+  const W=720, H=440, pad=46;
+  function X(lng){ return pad + (projX(lng)-minX)/(maxX-minX)*(W-2*pad); }
+  function Y(lat){ return pad + (projY(lat)-minY)/(maxY-minY)*(H-2*pad); }
+  const here=currentRegionId();
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mode-coded route map">';
+  // graticule for orientation
+  svg+='<g stroke="rgba(255,255,255,.06)" stroke-width="1">';
+  for(let gx=0;gx<=8;gx++){ const x=pad+gx*(W-2*pad)/8; svg+='<line x1="'+x.toFixed(1)+'" y1="'+pad+'" x2="'+x.toFixed(1)+'" y2="'+(H-pad)+'"/>'; }
+  for(let gy=0;gy<=5;gy++){ const y=pad+gy*(H-2*pad)/5; svg+='<line x1="'+pad+'" y1="'+y.toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y.toFixed(1)+'"/>'; }
+  svg+='</g>';
+  // hop lines (under the dots)
+  hops.forEach((h,i)=>{
+    const a=h.coords[0], b=h.coords[1];
+    const x1=X(a[1]), y1=Y(a[0]), x2=X(b[1]), y2=Y(b[0]);
+    const st=modeStyle(h.mode);
+    const optional=!!h.optional;
+    const w = optional?2.4:3.4;
+    const dash = dashFor(optional?"dashed":st.style, w);
+    const op = optional?0.55:0.95;
+    svg+='<line class="hopline" data-maphop="'+i+'" x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="'+st.color+'" stroke-width="'+w+'" stroke-linecap="round" opacity="'+op+'"'+(dash?' stroke-dasharray="'+dash+'"':'')+'><title>'+esc(st.label)+': '+esc(h.from)+' → '+esc(h.to)+(h.note?(' — '+esc(h.note)):'')+'</title></line>';
+    // scenic marker: a subtle glow ring at the midpoint
+    if(h.scenic){ const mx=(x1+x2)/2, my=(y1+y2)/2; svg+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="11" fill="none" stroke="'+st.color+'" stroke-width="1.2" opacity=".5"/>'; }
+  });
+  // mode icon at each hop midpoint (clickable)
+  hops.forEach((h,i)=>{
+    const a=h.coords[0], b=h.coords[1];
+    const mx=(X(a[1])+X(b[1]))/2, my=(Y(a[0])+Y(b[0]))/2;
+    const st=modeStyle(h.mode);
+    svg+='<g class="hopmid" data-maphop="'+i+'">';
+    svg+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="10" fill="#0e2138" stroke="'+st.color+'" stroke-width="1.6"'+(h.optional?' stroke-dasharray="2 2"':'')+'/>';
+    svg+='<text x="'+mx.toFixed(1)+'" y="'+(my+4).toFixed(1)+'" text-anchor="middle" font-size="11" font-family="Inter,sans-serif">'+esc(st.icon)+'</text>';
+    svg+='</g>';
+  });
+  // de-duped city dots + labels
+  const cities={}; const order=[];
+  function addCity(name, coord, regionId){
+    const key=name; if(cities[key]) return; cities[key]={name, coord, regionId}; order.push(key);
+  }
+  hops.forEach(h=>{ addCity(h.from, h.coords[0], h.seg); addCity(h.to, h.coords[1], h.seg); });
+  order.forEach(key=>{
+    const c=cities[key]; const x=X(c.coord[1]), y=Y(c.coord[0]);
+    const rid=cityRegionId(c.name); const on = rid && rid===here;
+    svg+='<g class="citydot"'+(rid?' data-mapcity="'+attr(rid)+'"':'')+'>';
+    svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(on?7:5)+'" fill="'+(on?"#e96a48":"#fff")+'" stroke="'+(rid?hueFor(rid):"#15568f")+'" stroke-width="2.6"/>';
+    svg+='<text x="'+x.toFixed(1)+'" y="'+(y-12).toFixed(1)+'" text-anchor="middle" fill="#dbe5f6" font-size="11.5" font-family="Inter,sans-serif" style="paint-order:stroke;stroke:#0a1626;stroke-width:3px">'+esc(c.name)+'</text>';
+    svg+='</g>';
+  });
+  svg+='</svg>';
+  // legend of modes actually used
+  const usedModes=[]; const seenMode={};
+  hops.forEach(h=>{ if(!seenMode[h.mode]){ seenMode[h.mode]=1; usedModes.push(h.mode); } });
+  const legend='<div class="maplegend">'+usedModes.map(mk=>{ const st=modeStyle(mk); const dash=(st.style==="dashed")?'border-top-style:dashed':(st.style==="dotted"?'border-top-style:dotted':'border-top-style:solid'); return '<span class="mli"><span class="mlswatch" style="border-top-color:'+st.color+';'+dash+'"></span><span class="mlico">'+esc(st.icon)+'</span><span class="mlname">'+esc(st.label)+'</span></span>'; }).join("")+'</div>';
+  // clickable leg list (kept — handy on mobile)
+  const legHtml='<div class="maproute">'+hops.map((h,i)=>{ const st=modeStyle(h.mode); const rid=cityRegionId(h.to); return '<button class="mleg" data-maphop="'+i+'"><span class="mn" style="background:'+st.color+'">'+esc(st.icon)+'</span><span class="mf">'+(rid?(legById(rid)?legById(rid).flag:""):"")+'</span><span class="mb"><span class="mt">'+esc(h.from)+' → '+esc(h.to)+(h.optional?' <span class="strtag" style="background:var(--plum)">optional</span>':'')+(h.scenic?' <span class="strtag" style="background:var(--teal)">scenic</span>':'')+'</span><span class="ms">'+esc(st.label)+(h.note?' · '+esc(firstSentence(h.note)):'')+'</span></span></button>'; }).join("")+'</div>';
+  host.innerHTML='<div class="mapwrap">'+svg+'</div>'+legend+'<div class="maphint">Tap any segment for its transport mode &amp; notes · color &amp; dash = mode</div>'+legHtml;
+  host.querySelectorAll("[data-maphop]").forEach(el=>el.addEventListener("click", ()=>{ openHopSheet(MAP_HOPS[parseInt(el.getAttribute("data-maphop"),10)]); }));
+  host.querySelectorAll("[data-mapcity]").forEach(el=>el.addEventListener("click", e=>{ e.stopPropagation(); const id=el.getAttribute("data-mapcity"); setView("route"); selectRegion(id); }));
+  try{ fxAnnotate(host); }catch(e){}
+}
+/* map a hop city name back to a region id (for color + "go to region" nav). */
+const CITY_TO_REGION={};
+(function(){ for(const id in LEG_GEO){ const g=LEG_GEO[id]; if(g && g.city) CITY_TO_REGION[g.city.toLowerCase()]=id; } })();
+function cityRegionId(name){
+  const low=String(name||"").toLowerCase().trim();
+  if(CITY_TO_REGION[low]) return CITY_TO_REGION[low];
+  // fall back to region/country name match
+  const k=keyForCountry(low); if(k) return k;
+  for(const id in LEG_GEO){ const g=LEG_GEO[id]; if(g && g.city && low.indexOf(g.city.toLowerCase())>-1) return id; }
+  return null;
+}
+/* segment detail in the existing sheet pattern. */
+function openHopSheet(h){
+  if(!h) return;
+  const st=modeStyle(h.mode);
+  const rid=cityRegionId(h.to)||cityRegionId(h.from);
+  const tags=[]; if(h.scenic) tags.push('<span class="strtag" style="background:var(--teal)">scenic</span>'); if(h.optional) tags.push('<span class="strtag" style="background:var(--plum)">optional</span>');
+  let body='<div class="sh-meta">'+
+    metaRow(st.icon,"Mode",st.label)+
+    metaRow("📍","From",h.from)+
+    metaRow("🏁","To",h.to)+
+  '</div>';
+  if(h.note) body+='<div class="sh-block"><div class="sbl"><span class="sbi">✎</span> Notes</div><p>'+fxDualHTML(h.note)+'</p></div>';
+  openSheet({key:rid||"hero", noLinks:true, eyebrow:st.icon+' '+esc(st.label)+' '+tags.join(" "), title:h.from+' → '+h.to, name:h.from+" to "+h.to, bodyHTML:body,
+    onRender:()=>{ if(!EDITING){ try{ fxAnnotate($("#sheetBody")); }catch(e){} } }});
+}
+/* legacy fallback: original ordered-node map keyed on LEG_GEO. */
+function renderMapLegacy(host){
   const order=dayBearingLegs().map(l=>l.id).filter(id=>LEG_GEO[id]);
   const pts=order.map(id=>LEG_GEO[id]).filter(Boolean);
   const lons=pts.map(p=>p.lon), lats=pts.map(p=>p.lat);
@@ -6704,19 +7013,15 @@ function renderMap(){
   function X(lon){ return pad + (lon-minLon)/(maxLon-minLon)*(W-2*pad); }
   function Y(lat){ return pad + (maxLat-lat)/(maxLat-minLat)*(H-2*pad); }
   const here=currentRegionId();
-  // landmass hint blobs (very rough) for orientation
   let svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Route map">';
-  // graticule
   svg+='<g stroke="rgba(255,255,255,.06)" stroke-width="1">';
   for(let gx=0;gx<=8;gx++){ const x=pad+gx*(W-2*pad)/8; svg+='<line x1="'+x+'" y1="'+pad+'" x2="'+x+'" y2="'+(H-pad)+'"/>'; }
   for(let gy=0;gy<=5;gy++){ const y=pad+gy*(H-2*pad)/5; svg+='<line x1="'+pad+'" y1="'+y+'" x2="'+(W-pad)+'" y2="'+y+'"/>'; }
   svg+='</g>';
-  // route path
   let path="";
   order.forEach((id,i)=>{ const g=LEG_GEO[id]; if(!g) return; path += (i?"L":"M")+X(g.lon).toFixed(1)+" "+Y(g.lat).toFixed(1)+" "; });
   svg+='<path d="'+path+'" fill="none" stroke="url(#routeg)" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 8" opacity=".9"/>';
   svg+='<defs><linearGradient id="routeg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1f7ac4"/><stop offset=".5" stop-color="#0f9d96"/><stop offset="1" stop-color="#e96a48"/></linearGradient></defs>';
-  // nodes
   order.forEach((id,i)=>{ const g=LEG_GEO[id]; if(!g) return; const leg=legById(id); const x=X(g.lon), y=Y(g.lat); const on=id===here;
     svg+='<g class="mnode" style="cursor:pointer" data-mapnode="'+id+'">';
     svg+='<circle cx="'+x+'" cy="'+y+'" r="'+(on?11:8)+'" fill="'+(on?"#e96a48":"#fff")+'" stroke="'+hueFor(id)+'" stroke-width="3"/>';
@@ -6772,19 +7077,76 @@ const COUNTRY_REF = {
   tr:{currency:"Turkish Lira (₺/TRY)", plug:"Type C/F · 230V", sos:"112 (all)", tipping:"~5–10%; round up taxis", phrases:"Merhaba (hi) · Teşekkürler (thanks) · Ne kadar? (how much)"},
   am:{currency:"Armenian Dram (֏/AMD)", plug:"Type C/F · 230V", sos:"911 or 112", tipping:"~10% in restaurants", phrases:"Barev (hi) · Shnorhakalutyun (thanks)"}
 };
+/* ---- tiny offline currency converter (amount + from/to), using live (overrideable) rates ---- */
+let FX_CV = {amount:10, from:"USD", to:"tw"};
+function fxCurrencyList(){
+  const out=[{id:"USD", label:"USD ($) — US Dollar"}];
+  const r=fxRates();
+  for(const id in r){ const e=r[id]; out.push({id:id, label:(e.code||id)+" ("+(e.sym||"")+") — "+id.toUpperCase()}); }
+  return out;
+}
+function fxConverterHTML(){
+  const list=fxCurrencyList();
+  function opts(sel){ return list.map(o=>'<option value="'+attr(o.id)+'"'+(o.id===sel?' selected':'')+'>'+esc(o.label)+'</option>').join(""); }
+  const ratesRows = Object.keys(fxRates()).map(id=>{ const e=fxEntry(id); return '<div class="fx-rateedit"><label>'+esc((e.code||id))+' ('+esc(e.sym||"")+') per $1</label><input type="number" step="any" inputmode="decimal" data-fxrate="'+attr(id)+'" value="'+(parseFloat(e.perUsd)||0)+'"></div>'; }).join("");
+  return '<div class="fx-card" data-fx-done="1"><div class="fxh"><span class="fxi">⇄</span><b>Currency converter</b></div>'+
+    '<div class="fx-row">'+
+      '<input type="number" step="any" inputmode="decimal" id="fxAmt" value="'+esc(FX_CV.amount)+'" aria-label="Amount">'+
+      '<select id="fxFrom" aria-label="From currency">'+opts(FX_CV.from)+'</select>'+
+      '<button class="fxswap" id="fxSwap" title="Swap" aria-label="Swap currencies">⇄</button>'+
+      '<select id="fxTo" aria-label="To currency">'+opts(FX_CV.to)+'</select>'+
+    '</div>'+
+    '<div class="fx-out" id="fxOut">—</div>'+
+    '<div class="fx-rateline">Offline estimate · rates are editable in Edit mode</div>'+
+    '<div class="fx-rates">'+ratesRows+'</div>'+
+  '</div>';
+}
+function fxUpdateConverter(){
+  const amtEl=$("#fxAmt"), fromEl=$("#fxFrom"), toEl=$("#fxTo"), out=$("#fxOut");
+  if(!amtEl||!fromEl||!toEl||!out) return;
+  FX_CV.amount=parseFloat(amtEl.value)||0; FX_CV.from=fromEl.value; FX_CV.to=toEl.value;
+  const res=fxConvert(FX_CV.amount, FX_CV.from, FX_CV.to);
+  if(res==null){ out.innerHTML='—'; return; }
+  out.innerHTML=esc(fxFmt(res, FX_CV.to))+'<small>'+esc(fxFmt(FX_CV.amount, FX_CV.from))+' '+esc((fxEntry(FX_CV.from)||{}).code||"")+' → '+esc((fxEntry(FX_CV.to)||{}).code||"")+'</small>';
+}
+function bindFxConverter(host){
+  const amtEl=host.querySelector("#fxAmt"), fromEl=host.querySelector("#fxFrom"), toEl=host.querySelector("#fxTo"), swap=host.querySelector("#fxSwap");
+  if(amtEl) ["input","change"].forEach(ev=>amtEl.addEventListener(ev, fxUpdateConverter));
+  if(fromEl) fromEl.addEventListener("change", fxUpdateConverter);
+  if(toEl) toEl.addEventListener("change", fxUpdateConverter);
+  if(swap) swap.addEventListener("click", ()=>{ const a=fromEl.value; fromEl.value=toEl.value; toEl.value=a; fxUpdateConverter(); });
+  // editable rates (owner-only via Edit mode) → OVERLAY.settings.rates
+  host.querySelectorAll("[data-fxrate]").forEach(inp=>inp.addEventListener("change", ()=>{
+    const id=inp.getAttribute("data-fxrate"); const v=parseFloat(inp.value);
+    OVERLAY.settings = OVERLAY.settings || {};
+    OVERLAY.settings.rates = OVERLAY.settings.rates || {};
+    const base=(DATA.currency&&DATA.currency.rates&&DATA.currency.rates[id])||{};
+    if(!v || v<=0 || v===(parseFloat(base.perUsd)||NaN)){ if(OVERLAY.settings.rates[id]) delete OVERLAY.settings.rates[id].perUsd; }
+    else { OVERLAY.settings.rates[id]=Object.assign({}, OVERLAY.settings.rates[id]||{}, {perUsd:v, code:base.code, sym:base.sym}); }
+    persist();
+    fxUpdateConverter();
+    toast("Rate updated: "+((fxEntry(id)||{}).code||id), "$");
+  }));
+  fxUpdateConverter();
+}
 function renderCountryRef(){
   const host=$("#refHost"); if(!host) return;
-  host.innerHTML = LEGS.map(l=>{
+  const hasFx = !!(DATA.currency && DATA.currency.rates);
+  host.innerHTML = (hasFx?fxConverterHTML():"") + LEGS.map(l=>{
     const ref=COUNTRY_REF[l.id]; if(!ref) return "";
+    const fxId = fxPerUsd(l.id) ? l.id : null;
+    const fxLine = fxId ? '<div class="qritem" data-fx-done="1"><div class="ql">⇄ Rate (≈)</div><div class="qv">$1 ≈ '+esc(fxFmt(fxPerUsd(l.id), l.id))+'</div></div>' : '';
     return '<div class="qrcard"><div class="qrh"><span class="qrf">'+l.flag+'</span><span class="qrn">'+esc(l.name)+(l.opt?' <span class="strtag" style="background:var(--plum)">option</span>':'')+'</span></div>'+
       '<div class="qrgrid">'+
       '<div class="qritem"><div class="ql">💵 Currency</div><div class="qv">'+esc(ref.currency)+'</div></div>'+
       '<div class="qritem"><div class="ql">🔌 Plug / Voltage</div><div class="qv">'+esc(ref.plug)+'</div></div>'+
       '<div class="qritem"><div class="ql">🆘 Emergency</div><div class="qv">'+esc(ref.sos)+'</div></div>'+
       '<div class="qritem"><div class="ql">💴 Tipping</div><div class="qv">'+esc(ref.tipping)+'</div></div>'+
+      fxLine+
       '<div class="qritem wide"><div class="ql">🗣 Key phrases</div><div class="qv">'+esc(ref.phrases)+'</div></div>'+
       '</div></div>';
   }).join("");
+  if(hasFx) bindFxConverter(host);
 }
 
 /* ============ COUNTDOWNS ============ */
