@@ -1,0 +1,30 @@
+{
+  "name": "The Long Way to London",
+  "short_name": "To London",
+  "description": "The Long Way to London — World Tour 2026 companion app.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1d3a",
+  "theme_color": "#0b1d3a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Crect%20width='512'%20height='512'%20rx='96'%20fill='%230b1d3a'/%3E%3Ccircle%20cx='256'%20cy='256'%20r='150'%20fill='none'%20stroke='%23f4c542'%20stroke-width='14'/%3E%3Cpath%20d='M256%20120%20L256%20392%20M120%20256%20L392%20256'%20stroke='%23f4c542'%20stroke-width='8'%20opacity='0.5'/%3E%3Cpath%20d='M256%20140%20C320%20210%20320%20302%20256%20372%20C192%20302%20192%20210%20256%20140%20Z'%20fill='none'%20stroke='%23f4c542'%20stroke-width='8'%20opacity='0.5'/%3E%3Ccircle%20cx='256'%20cy='256'%20r='18'%20fill='%23f4c542'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20192%20192'%3E%3Crect%20width='192'%20height='192'%20rx='36'%20fill='%230b1d3a'/%3E%3Ccircle%20cx='96'%20cy='96'%20r='56'%20fill='none'%20stroke='%23f4c542'%20stroke-width='6'/%3E%3Ccircle%20cx='96'%20cy='96'%20r='7'%20fill='%23f4c542'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Crect%20width='512'%20height='512'%20fill='%230b1d3a'/%3E%3Cg%20transform='translate(256,256)%20scale(0.6)%20translate(-256,-256)'%3E%3Ccircle%20cx='256'%20cy='256'%20r='150'%20fill='none'%20stroke='%23f4c542'%20stroke-width='18'/%3E%3Cpath%20d='M256%20120%20L256%20392%20M120%20256%20L392%20256'%20stroke='%23f4c542'%20stroke-width='10'%20opacity='0.5'/%3E%3Ccircle%20cx='256'%20cy='256'%20r='22'%20fill='%23f4c542'/%3E%3C/g%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
